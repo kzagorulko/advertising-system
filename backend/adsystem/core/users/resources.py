@@ -59,9 +59,7 @@ class Users(HTTPEndpoint):
     # TODO make this for admin only
     @with_transaction
     @jwt_required
-    @permissions.required(
-        action=PermissionAction.CREATE, return_user=True, return_role=True
-    )
+    @permissions.required(action=PermissionAction.CREATE)
     async def post(self, request):
         data = await request.json()
         if not await is_username_unique(data['username']):

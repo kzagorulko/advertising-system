@@ -71,7 +71,10 @@ def test_create_non_unique_user(client):
 
     assert response.status_code == 400, response.text
     data = response.json()
-    assert data['description'] == 'User with username test_demo already exist'
+    assert data['description'] == (
+        'Поле `username` не прошло валидацию. Ошибка: Пользователь с `username'
+        '` `test_demo` уже существует.'
+    )
 
 
 def test_permissions(client):

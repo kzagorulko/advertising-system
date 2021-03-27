@@ -1,4 +1,5 @@
 from uuid import uuid4
+from validate_email import validate_email
 
 from starlette.routing import Route
 from starlette.endpoints import HTTPEndpoint
@@ -8,7 +9,7 @@ from passlib.hash import pbkdf2_sha256 as sha256
 from ..database import db
 from ..utils import (
     with_transaction, create_refresh_token, create_access_token, jwt_required,
-    make_error, Permissions
+    make_error, Permissions, validation
 )
 from ..models import UserModel, RoleModel, PermissionAction
 from .utils import (
@@ -60,18 +61,56 @@ class Users(HTTPEndpoint):
     @with_transaction
     @jwt_required
     @permissions.required(action=PermissionAction.CREATE)
-    async def post(self, request):
-        data = await request.json()
-        if not await is_username_unique(data['username']):
-            return make_error(
-                f'User with username {data["username"]} already exist',
-                status_code=400
-            )
+    @validation(schema={
+        'username': {
+            'required': True,
+            'type': str,
+            'min_length': 4,
+            'max_length': 50,
+            'unique_username': True
+        },
+        'password':  {
+            'required': True,
+            'type': str,
+            'min_length': 5,
+            'max_length': 50,
+        },
+        'displayName': {
+            'required': True,
+            'type': str,
+            'min_length': 5,
+            'max_length': 50,
+        },
+        'email': {
+            'required': True,
+            'type': str,
+            'email': True,
+        },
+        'role': {
+            'required': True,
+            'type': str,
+            'max_length': 64,
+        }
+    }, custom_checks={
+        'email': {
+            # with the pyDNS, it will be better
+            'func': lambda v, *args: validate_email(v),
+            'message': lambda v, *args: f'`{v}` не является корректной электро'
+            f'нной почтой'
+        },
+        'unique_username': {
+            # it works with async functions
+            'func': lambda v, *args: is_username_unique(v),
+            'message': lambda v, *args: f'Пользователь с `username` `{v}` уже '
+            f'существует.'
+        },
+    })
+    async def post(self, data):
 
         try:
             role_id = await get_role_id(data)
         except RoleNotExist:
-            return make_error("Role doesn't exist", status_code=404)
+            return make_error('Роли не существует', status_code=404)
 
         new_user = await UserModel.create(
             username=data['username'],
@@ -97,26 +136,65 @@ class User(HTTPEndpoint):
         ).all()
         if users:
             return JSONResponse(users[0].jsonify(for_card=True))
-        return make_error(f'User with id {user_id} not found', status_code=404)
+        return make_error(
+            f'Пользователь с идентификатором {user_id} не найден',
+            status_code=404
+        )
 
     # TODO: make this method for admin only
 
     @with_transaction
     @jwt_required
     @permissions.required(action=PermissionAction.UPDATE)
-    async def patch(self, request):
-        data = await request.json()
+    @validation(schema={
+        'password': {
+            'type': str,
+            'min_length': 5,
+            'max_length': 30,
+        },
+        'displayName': {
+            'type': str,
+            'min_length': 5,
+            'max_length': 50,
+        },
+        'email': {
+            'type': str,
+            'email': True,
+        },
+        'role': {
+            'type': str,
+            'max_length': 64,
+        },
+        'deactivated': {
+            'type': bool
+        }
+    }, custom_checks={
+        'email': {
+            # with the pyDNS, it will be better
+            'func': lambda v, *args: validate_email(v),
+            'message': lambda v, *args: f'`{v}` не является корректной электро'
+            f'нной почтой'
+        },
+        'unique_username': {
+            # it works with async functions
+            'func': lambda v, *args: is_username_unique(v),
+            'message': lambda v, *args: f'Пользователь с `username` `{v}` уже '
+            f'существует.'
+        },
+    }, return_request=True)
+    async def patch(self, request, data):
         user_id = request.path_params['user_id']
         user = await UserModel.get(user_id)
         if not user:
             return make_error(
-                f'User with id {user_id} not found', status_code=404
+                f'Пользователь с идентификатором {user_id} не найден',
+                status_code=404
             )
 
         try:
             role_id = await get_role_id(data)
         except RoleNotExist:
-            return make_error("Role does't exist", status_code=404)
+            return make_error('Роли не существует', status_code=404)
 
         values = {
             'display_name': data['displayName']
@@ -136,15 +214,31 @@ class User(HTTPEndpoint):
         return Response('', status_code=204)
 
 
-async def get_refresh_token(request):
-    data = await request.json()
+@validation(schema={
+    'identifier': {
+        'required': True,
+        'type': str,
+        'min_length': 4,
+        'max_length': 50,
+    },
+    'password': {
+        'required': True,
+        'type': str,
+        'min_length': 4,
+        'max_length': 50,
+    },
+})
+async def get_refresh_token(data):
     user = await UserModel.get_by_identifier(data['identifier'])
 
     if not user:
-        return make_error('User not found', status_code=404)
+        return make_error(
+            'Пользователь с таким именем или электронной почтой не найден',
+            status_code=404
+        )
 
     if not sha256.verify(data['password'], user.password):
-        return make_error('Wrong credentials', status_code=401)
+        return make_error('Пароль неверен', status_code=401)
 
     return JSONResponse({
         'id': user.id,
@@ -163,11 +257,17 @@ async def get_access_token(request, user):
 
 
 @jwt_required
-async def reset_session(request, user):
-    data = await request.json()
-
+@validation(schema={
+    'password': {
+        'required': True,
+        'type': str,
+        'min_length': 4,
+        'max_length': 50,
+    },
+})
+async def reset_session(data, user):
     if not sha256.verify(data['password'], user.password):
-        return make_error('Wrong credentials', status_code=401)
+        return make_error('Пароль неверен', status_code=401)
 
     await user.update(
         session=str(uuid4())

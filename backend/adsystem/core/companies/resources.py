@@ -72,9 +72,10 @@ class Companies(HTTPEndpoint):
             query_params,
             current_query, {
                 'id': CompanyModel.id,
-                'creator_id': CompanyModel.creator_id,
-                'start_date': CompanyModel.start_date,
-                'end_date': CompanyModel.end_date,
+                'title': CompanyModel.title,
+                'creatorId': CompanyModel.creator_id,
+                'startDate': CompanyModel.start_date,
+                'endDate': CompanyModel.end_date,
             }
         )
 

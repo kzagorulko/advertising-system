@@ -43,7 +43,7 @@ class Users(HTTPEndpoint):
             current_query, {
                 'id': UserModel.id,
                 'displayName': UserModel.display_name,
-                'role': RoleModel.display_name
+                'roleId': UserModel.role_id,
             }
         )
 

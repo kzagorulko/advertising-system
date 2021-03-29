@@ -3,32 +3,18 @@ import {
   List,
   Datagrid,
   TextField,
-  useListContext,
-  CreateButton,
-  TopToolbar,
-  usePermissions,
+  ReferenceField,
 } from 'react-admin';
-import { checkAppAction } from '../../utils';
-
-const UserListActions = () => {
-  const {
-    basePath,
-  } = useListContext();
-  const { loaded, permissions } = usePermissions('/users');
-
-  return loaded ? (
-    <TopToolbar>
-      {checkAppAction(permissions.actions, 'create') ? <CreateButton basePath={basePath} /> : null}
-    </TopToolbar>
-  ) : <TopToolbar />;
-};
+import { ListActions } from '../utils';
 
 const UserList = (props) => (
-  <List {...props} actions={<UserListActions />} title="Пользователи">
+  <List {...props} actions={<ListActions permissionName="users" />} title="Пользователи">
     <Datagrid rowClick="show">
-      <TextField source="id" />
-      <TextField source="displayName" />
-      <TextField source="role" />
+      <TextField source="id" label="Идентификатор" />
+      <TextField source="displayName" label="ФИО" />
+      <ReferenceField link="show" label="Роль" source="roleId" reference="roles">
+        <TextField source="displayName" />
+      </ReferenceField>
     </Datagrid>
   </List>
 );

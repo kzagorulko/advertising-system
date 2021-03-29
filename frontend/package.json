@@ -5,6 +5,7 @@
   "dependencies": {
     "@babel/core": "7.12.3",
     "@material-ui/core": "^4.11.0",
+    "@material-ui/icons": "latest",
     "@pmmmwh/react-refresh-webpack-plugin": "0.4.2",
     "@svgr/webpack": "5.4.0",
     "@typescript-eslint/eslint-plugin": "^4.5.0",
@@ -37,6 +38,8 @@
     "postcss-normalize": "8.0.1",
     "postcss-preset-env": "6.7.0",
     "postcss-safe-parser": "5.0.2",
+    "ra-i18n-polyglot": "^3.13.5",
+    "ra-language-russian": "^3.13.5",
     "react": "^17.0.1",
     "react-admin": "^3.9.5",
     "react-app-polyfill": "^2.0.0",

@@ -14,31 +14,17 @@ class UserModel(db.Model):
     session = db.Column(db.String(36), nullable=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'), nullable=True)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        self._role = None
-
-    @property
-    def role(self):
-        return self._role
-
-    @role.setter
-    def role(self, value):
-        self._role = value
-
     def jsonify(self, for_card=False):
         result = {
             'id': self.id,
             'displayName': self.display_name,
-
+            'roleId': self.role_id
         }
 
         if for_card:
             result['username'] = self.username
             result['email'] = self.email
             result['deactivated'] = self.deactivated
-
-        result['role'] = self.role.display_name if self.role else ''
 
         return result
 

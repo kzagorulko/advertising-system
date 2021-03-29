@@ -3,16 +3,20 @@ import {
   SimpleForm,
   Create,
   TextInput,
+  ReferenceInput,
+  AutocompleteInput,
 } from 'react-admin';
 
 const UserCreate = (props) => (
   <Create title="Новый пользователь" {...props}>
     <SimpleForm>
-      <TextInput source="username" />
-      <TextInput source="password" />
-      <TextInput source="displayName" />
-      <TextInput source="email" />
-      <TextInput source="role" />
+      <TextInput source="username" label="Логин" />
+      <TextInput source="password" label="Пароль" />
+      <TextInput source="displayName" label="ФИО" />
+      <TextInput source="email" label="Электронная почта" />
+      <ReferenceInput source="roleId" reference="roles" label="Роль">
+        <AutocompleteInput optionText="displayName" />
+      </ReferenceInput>
     </SimpleForm>
   </Create>
 );

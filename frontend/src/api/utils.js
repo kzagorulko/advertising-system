@@ -74,3 +74,43 @@ export function request(method, url, data = {}) {
       );
     });
 }
+
+export function convertFileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+
+    reader.readAsDataURL(file.rawFile);
+  });
+}
+
+/**
+ * Pipeline for preparing property "image"
+ * @param params - argument with data.image
+ * @returns callback with prepared argument
+ */
+export function prepareFile(params) {
+  return new Promise((resolve, reject) => {
+    if (!(params.data && params.data.file)) {
+      return resolve(params);
+    }
+
+    return convertFileToBase64(params.data.file).then((base64Pictures) => {
+      const customParams = { ...params };
+
+      customParams.data.file = base64Pictures;
+      return resolve(customParams);
+    }).catch((error) => reject(error));
+  });
+}
+
+export const prepareUrl = (url, subresource) => {
+  if (url.includes('requestCategories')) {
+    return url.replace(/requestCategories/gi, 'requests/categories');
+  }
+  if (subresource) {
+    return `${url}/${subresource}`;
+  }
+  return url;
+};

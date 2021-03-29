@@ -8,8 +8,9 @@ class RoleModel(db.Model):
     name = db.Column(db.String(50), unique=True, nullable=False)
     display_name = db.Column(db.String(64), unique=True, nullable=False)
 
-    def jsonify(self):
+    def jsonify(self, **kwargs):
         return {
+            'id': self.id,
             'name': self.name,
             'displayName': self.display_name,
         }

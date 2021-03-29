@@ -3,18 +3,16 @@ from validate_email import validate_email
 
 from starlette.routing import Route
 from starlette.endpoints import HTTPEndpoint
-from starlette.responses import JSONResponse, Response
 from passlib.hash import pbkdf2_sha256 as sha256
 
 from ..database import db
 from ..utils import (
     with_transaction, create_refresh_token, create_access_token, jwt_required,
-    make_error, Permissions, validation
+    make_error, Permissions, validation, GinoQueryHelper, make_list_response,
+    make_response, NO_CONTENT, get_one,
 )
 from ..models import UserModel, RoleModel, PermissionAction
-from .utils import (
-    is_username_unique, get_role_id, RoleNotExist, get_column_for_order,
-)
+from .utils import is_username_unique, validate_role
 
 permissions = Permissions(app_name='users')
 
@@ -24,40 +22,39 @@ class Users(HTTPEndpoint):
     @jwt_required
     @permissions.required(action=PermissionAction.GET)
     async def get(request):
-        users_query = UserModel.outerjoin(RoleModel).select()
+        current_query = UserModel.query
         total_query = db.select([db.func.count(UserModel.id)])
 
         query_params = request.query_params
 
         if 'search' in query_params:
-            users_query.where(
-                UserModel.display_name.ilike(f'%{query_params["search"]}%')
+            current_query, total_query = GinoQueryHelper.search(
+                UserModel.display_name,
+                query_params['search'],
+                current_query,
+                total_query
             )
 
-        if 'page' in query_params and 'perPage' in query_params:
-            page = int(query_params['page']) - 1
-            per_page = int(query_params['perPage'])
-            users_query = users_query.limit(per_page).offset(page * per_page)
-
-        if 'order' in query_params and 'field' in query_params:
-            users_query = users_query.order_by(
-                get_column_for_order(
-                    query_params['field'],
-                    query_params['order'] == 'ASC'
-                )
-            )
+        current_query = GinoQueryHelper.pagination(
+            query_params, current_query
+        )
+        current_query = GinoQueryHelper.order(
+            query_params,
+            current_query, {
+                'id': UserModel.id,
+                'displayName': UserModel.display_name,
+                'role': RoleModel.display_name
+            }
+        )
 
         total = await total_query.gino.scalar()
-        users = await users_query.gino.load(
-            UserModel.distinct(UserModel.id).load(role=RoleModel)
-        ).all()
+        items = await current_query.gino.all()
 
-        return JSONResponse({
-            'items': [user.jsonify() for user in users],
-            'total': total,
-        })
+        return make_list_response(
+            [item.jsonify() for item in items],
+            total
+        )
 
-    # TODO make this for admin only
     @with_transaction
     @jwt_required
     @permissions.required(action=PermissionAction.CREATE)
@@ -86,10 +83,10 @@ class Users(HTTPEndpoint):
             'type': str,
             'email': True,
         },
-        'role': {
+        'roleId': {
             'required': True,
-            'type': str,
-            'max_length': 64,
+            'type': int,
+            'role': True,
         }
     }, custom_checks={
         'email': {
@@ -104,23 +101,21 @@ class Users(HTTPEndpoint):
             'message': lambda v, *args: f'Пользователь с `username` `{v}` уже '
             f'существует.'
         },
+        'role': {
+            'func': validate_role,
+            'message': lambda v, *args: f'Роль с `id` `{v}` не существует.'
+        },
     })
     async def post(self, data):
-
-        try:
-            role_id = await get_role_id(data)
-        except RoleNotExist:
-            return make_error('Роли не существует', status_code=404)
-
         new_user = await UserModel.create(
             username=data['username'],
             password=sha256.hash(data['password']),
             session=str(uuid4()),
             display_name=data['displayName'],
             email=data['email'],
-            role_id=role_id
+            role_id=data['roleId'],
         )
-        return JSONResponse({'id': new_user.id})
+        return make_response({'id': new_user.id})
 
 
 class User(HTTPEndpoint):
@@ -128,17 +123,10 @@ class User(HTTPEndpoint):
     @jwt_required
     @permissions.required(action=PermissionAction.GET)
     async def get(request):
-        user_id = request.path_params['user_id']
-        users = await UserModel.outerjoin(RoleModel).select().where(
-            UserModel.id == user_id
-        ).gino.load(
-            UserModel.distinct(UserModel.id).load(role=RoleModel)
-        ).all()
-        if users:
-            return JSONResponse(users[0].jsonify(for_card=True))
-        return make_error(
-            f'Пользователь с идентификатором {user_id} не найден',
-            status_code=404
+        return await get_one(
+            UserModel,
+            request.path_params['user_id'],
+            'Пользователь'
         )
 
     # TODO: make this method for admin only
@@ -161,9 +149,9 @@ class User(HTTPEndpoint):
             'type': str,
             'email': True,
         },
-        'role': {
-            'type': str,
-            'max_length': 64,
+        'roleId': {
+            'type': int,
+            'role': True,
         },
         'deactivated': {
             'type': bool
@@ -175,12 +163,10 @@ class User(HTTPEndpoint):
             'message': lambda v, *args: f'`{v}` не является корректной электро'
             f'нной почтой'
         },
-        'unique_username': {
-            # it works with async functions
-            'func': lambda v, *args: is_username_unique(v),
-            'message': lambda v, *args: f'Пользователь с `username` `{v}` уже '
-            f'существует.'
-        },
+        'role': {
+            'func': validate_role,
+            'message': lambda v, *args: f'Роль с `id` `{v}` не существует.'
+        }
     }, return_request=True)
     async def patch(self, request, data):
         user_id = request.path_params['user_id']
@@ -191,11 +177,6 @@ class User(HTTPEndpoint):
                 status_code=404
             )
 
-        try:
-            role_id = await get_role_id(data)
-        except RoleNotExist:
-            return make_error('Роли не существует', status_code=404)
-
         values = {
             'display_name': data['displayName']
             if 'displayName' in data else None,
@@ -204,14 +185,14 @@ class User(HTTPEndpoint):
             'deactivated': data['deactivated']
             if 'deactivated' in data else None,
             'email': data['email'] if 'email' in data else None,
-            'role_id': role_id
+            'role_id': data['roleId'] if 'roleId' in data else None,
         }
 
         values = dict(filter(lambda item: item[1] is not None, values.items()))
 
         await user.update(**values).apply()
 
-        return Response('', status_code=204)
+        return NO_CONTENT
 
 
 @validation(schema={
@@ -240,7 +221,7 @@ async def get_refresh_token(data):
     if not sha256.verify(data['password'], user.password):
         return make_error('Пароль неверен', status_code=401)
 
-    return JSONResponse({
+    return make_response({
         'id': user.id,
         'email': user.email,
         'username': user.username,
@@ -251,7 +232,7 @@ async def get_refresh_token(data):
 
 @jwt_required(token_type='refresh')
 async def get_access_token(request, user):
-    return JSONResponse({
+    return make_response({
         'access_token': create_access_token(user.session),
     })
 
@@ -273,12 +254,12 @@ async def reset_session(data, user):
         session=str(uuid4())
     ).apply()
 
-    return Response('', status_code=204)
+    return NO_CONTENT
 
 
 @jwt_required
 async def get_actions(request, user):
-    return JSONResponse(await permissions.get_actions(user.role_id))
+    return make_response(await permissions.get_actions(user.role_id))
 
 
 routes = [

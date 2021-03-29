@@ -1,28 +1,26 @@
-/* eslint-disable react/jsx-props-no-spreading */
 import React from 'react';
 import {
   Show,
   SimpleShowLayout,
   TextField,
-  useNotify,
   BooleanField,
+  ReferenceField,
 } from 'react-admin';
-import UserTitle from './utils';
+import { EntityTitle, ShowActions } from '../utils';
 
-const UserShow = (props) => {
-  const notify = useNotify();
-  const clickie = () => notify('Clicked', 'info');
-  return (
-    <Show title={<UserTitle />} {...props}>
-      <SimpleShowLayout>
-        <TextField source="id" onClick={clickie} />
-        <TextField source="username" />
+const UserShow = (props) => (
+  <Show title={<EntityTitle filedName="displayName" />} actions={<ShowActions permissionName="users" />} {...props}>
+    <SimpleShowLayout>
+      <TextField source="id" label="Идентификатор" />
+      <TextField source="username" label="Логин" />
+      <TextField source="displayName" label="ФИО" />
+      <BooleanField source="deactivated" label="Деактифирован?" />
+      <TextField source="email" label="Электронная почта" />
+      <ReferenceField link="show" label="Роль" source="roleId" reference="roles">
         <TextField source="displayName" />
-        <BooleanField source="deactivated" />
-        <TextField source="email" />
-      </SimpleShowLayout>
-    </Show>
-  );
-};
+      </ReferenceField>
+    </SimpleShowLayout>
+  </Show>
+);
 
 export default UserShow;

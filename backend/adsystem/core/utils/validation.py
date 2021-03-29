@@ -7,7 +7,8 @@ from . import make_error
 
 CHECKS = {
     'type': {
-        'func': lambda value, excepted_type: type(value) == excepted_type,
+        'func': lambda value, excepted_type: type(value) == excepted_type
+        if type(excepted_type) is not tuple else type(value) in excepted_type,
         'message': lambda value, excepted_type: f'Поолучен тип '
         f'{type(value).__name__}, ожидался тип {excepted_type.__name__}.',
     },
@@ -34,14 +35,23 @@ class ValidationError(Exception):
         self.description = description
 
 
-async def _validate(schema, checks, data):
+async def _validate(schema, custom_checks, data, request):
+    checks = {**CHECKS}
+    if custom_checks:
+        checks = {**checks, **custom_checks}
     for field_name, params in schema.items():
         for param, value in params.items():
             if field_name not in data and 'required' not in params:
                 continue
-            result = checks[param]['func'](
-                field_name in data and data[field_name], value
-            )
+            if 'request' in checks[param] and checks[param]['request']:
+                result = checks[param]['func'](
+                    field_name in data and data[field_name], value,
+                    request=request
+                )
+            else:
+                result = checks[param]['func'](
+                    field_name in data and data[field_name], value
+                )
             if inspect.isawaitable(result):
                 result = await result
             if not result:
@@ -54,7 +64,10 @@ async def _validate(schema, checks, data):
                 )
 
 
-def validation(schema, *arguments, custom_checks=None, return_request=False):
+def validation(
+        schema, *arguments, custom_checks=None, return_request=False,
+        nullable=False
+):
     def wrapper(func):
         async def wrapper_view(*args, **kwargs):
             request = list(
@@ -65,12 +78,11 @@ def validation(schema, *arguments, custom_checks=None, return_request=False):
             except JSONDecodeError:
                 return make_error('Ошибка при парсинге JSON')
 
-            checks = {**CHECKS}
-            if custom_checks:
-                checks = {**checks, **custom_checks}
+            if len(data) == 0 and not nullable:
+                return make_error('Полее с данными пусто')
 
             try:
-                await _validate(schema, checks, data)
+                await _validate(schema, custom_checks, data, request)
             except ValidationError as e:
                 return make_error(e.description)
 
@@ -80,7 +92,10 @@ def validation(schema, *arguments, custom_checks=None, return_request=False):
 
             new_args = list(
                 filter(lambda v: not isinstance(v, Request), args)
-            ) if not return_request else args
+            )
+
+            if return_request:
+                result['request'] = request
 
             return await func(*new_args, **result, **kwargs)
 

@@ -4,10 +4,10 @@ import {
   SimpleShowLayout,
   TextField,
 } from 'react-admin';
-import { EntityTitle } from '../utils';
+import { EntityTitle, ShowActions } from '../utils';
 
 const MeasureShow = (props) => (
-  <Show title={<EntityTitle filedName="name" />} {...props}>
+  <Show title={<EntityTitle filedName="name" />} actions={<ShowActions permissionName="measures" />} {...props}>
     <SimpleShowLayout>
       <TextField source="id" label="Идентификатор" />
       <TextField source="name" label="Название единицы измерения" />

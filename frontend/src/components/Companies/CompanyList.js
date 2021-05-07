@@ -25,7 +25,7 @@ const CompanyListActions = () => {
 };
 
 const CompanyList = (props) => (
-  <List {...props} actions={<CompanyListActions />} title="Пользователи">
+  <List {...props} actions={<CompanyListActions />} title="Рекламные компании">
     <Datagrid rowClick="show">
       <TextField source="id" label="Идентификатор" />
       <TextField source="title" label="Название" />

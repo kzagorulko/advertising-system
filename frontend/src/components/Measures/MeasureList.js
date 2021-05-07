@@ -24,7 +24,7 @@ const MeasureListActions = () => {
 };
 
 const MeasureList = (props) => (
-  <List {...props} actions={<MeasureListActions />} title="Роли">
+  <List {...props} actions={<MeasureListActions />} title="Единицы измерения">
     <Datagrid rowClick="show">
       <TextField source="id" label="Идентификатор" />
       <TextField source="name" label="Название единицы измерения" />

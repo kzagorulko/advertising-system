@@ -7,10 +7,10 @@ import {
   DateField,
   NumberField,
 } from 'react-admin';
-import { EntityTitle } from '../utils';
+import { EntityTitle, ShowActions } from '../utils';
 
 const CompanyShow = (props) => (
-  <Show title={<EntityTitle filedName="title" />} {...props}>
+  <Show title={<EntityTitle filedName="title" />} actions={<ShowActions permissionName="companies" />} {...props}>
     <SimpleShowLayout>
       <TextField source="id" label="Идентификатор" />
       <TextField source="title" label="Название" />

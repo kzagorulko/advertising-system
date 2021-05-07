@@ -22,6 +22,7 @@ import MeasureEdit from './components/Measures/MeasureEdit';
 import CompanyCreate from './components/Companies/CompanyCreate';
 import CompanyShow from './components/Companies/CompanyShow';
 import CompanyEdit from './components/Companies/CompanyEdit';
+import BannerTypes from './components/BannerTypes';
 
 const i18nProvider = polyglotI18nProvider(() => russianMessages, 'ru');
 
@@ -68,6 +69,14 @@ const App = () => (
             create={CompanyCreate}
             show={CompanyShow}
             edit={CompanyEdit}
+          />
+        ) : null,
+      permissions.banner_types
+        ? (
+          <Resource
+            name="bannerTypes"
+            list={BannerTypes}
+            options={{ label: 'Типы банеров' }}
           />
         ) : null,
     ]}

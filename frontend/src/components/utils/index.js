@@ -6,6 +6,9 @@ import EditActions from './EditActions';
 import CustomCreateButton from './CustomCreateButton';
 import {
   OneScreenList,
+  OneScreenEdit,
+  OneScreenEntity,
+  OneScreenCreate,
   OneScreenListActions,
   OneScreenCreateToolbar,
 } from './OneScreenEntity';
@@ -18,6 +21,9 @@ export {
   EditActions,
   CustomCreateButton,
   OneScreenList,
+  OneScreenEdit,
+  OneScreenEntity,
+  OneScreenCreate,
   OneScreenListActions,
   OneScreenCreateToolbar,
 };

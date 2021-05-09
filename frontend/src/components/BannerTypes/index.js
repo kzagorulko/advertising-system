@@ -2,14 +2,13 @@ import React from 'react';
 import BannerTypesList from './BannerTypesList';
 import BannerTypesCreate from './BannerTypesCreate';
 import BannerTypesEdit from './BannerTypesEdit';
-import { OneScreenList } from '../utils';
+import { OneScreenEntity } from '../utils';
 
 const BannerTypes = (props) => (
-  <OneScreenList
+  <OneScreenEntity
     List={BannerTypesList}
     Create={BannerTypesCreate}
     Edit={BannerTypesEdit}
-    // permissionName="banner_types"
     {...props}
   />
 );

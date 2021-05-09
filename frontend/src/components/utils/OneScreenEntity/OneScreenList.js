@@ -1,44 +1,27 @@
-import React, { useEffect, useState } from 'react';
-import { Drawer } from '@material-ui/core';
-import { useRefresh, usePermissions } from 'react-admin';
-import { checkAppAction } from '../../../utils';
+import React from 'react';
+import { List, Datagrid } from 'react-admin';
+import OneScreenListActions from './OneScreenListActions';
 
 const OneScreenList = ({
-  List,
-  Create,
-  Edit,
-  permissionName,
+  title,
+  empty,
+  onRowClick,
+  onCreate,
+  children,
   ...props
-}) => {
-  const [row, setRow] = useState();
-  const refresh = useRefresh();
-
-  const { resource } = props;
-  const { loaded, permissions } = usePermissions(`/${permissionName || resource}`);
-
-  useEffect(() => {
-    refresh();
-  }, [row, refresh]);
-
-  return loaded && (
-    <>
-      <List
-        onCreate={checkAppAction(permissions.actions, 'create') && (() => setRow({ id: 'create' }))}
-        onRowClick={checkAppAction(permissions.actions, 'update') && setRow}
-        {...props}
-      />
-      <Drawer anchor="right" open={row && row.id === 'create'}>
-        <Create onCancel={() => setRow({})} {...props} />
-      </Drawer>
-      <Drawer anchor="right" open={row && row.id && row.id !== 'create' && row.record}>
-        <Edit
-          onCancel={() => setRow({})}
-          record={row && row.record}
-          {...props}
-        />
-      </Drawer>
-    </>
-  );
-};
+}) => console.log(props) || (
+  <List
+    title={title}
+    empty={empty}
+    actions={<OneScreenListActions onClick={onCreate} />}
+    {...props}
+  >
+    <Datagrid
+      rowClick={(id, basePath, record) => onRowClick && onRowClick({ id, basePath, record })}
+    >
+      {children}
+    </Datagrid>
+  </List>
+);
 
 export default OneScreenList;

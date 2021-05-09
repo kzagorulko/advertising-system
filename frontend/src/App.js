@@ -14,15 +14,12 @@ import UserCreate from './components/Users/UserCreate';
 import UserEdit from './components/Users/UserEdit';
 import RoleList from './components/Roles/RoleList';
 import RoleShow from './components/Roles/RoleShow';
-import MeasureList from './components/Measures/MeasureList';
 import CompanyList from './components/Companies/CompanyList';
-import MeasureCreate from './components/Measures/MeasureCreate';
-import MeasureShow from './components/Measures/MeasureShow';
-import MeasureEdit from './components/Measures/MeasureEdit';
 import CompanyCreate from './components/Companies/CompanyCreate';
 import CompanyShow from './components/Companies/CompanyShow';
 import CompanyEdit from './components/Companies/CompanyEdit';
 import BannerTypes from './components/BannerTypes';
+import Measures from './components/Measures';
 
 const i18nProvider = polyglotI18nProvider(() => russianMessages, 'ru');
 
@@ -53,11 +50,8 @@ const App = () => (
         ? (
           <Resource
             name="measures"
-            list={MeasureList}
-            options={{ label: 'Меры' }}
-            create={MeasureCreate}
-            show={MeasureShow}
-            edit={MeasureEdit}
+            list={Measures}
+            options={{ label: 'Единицы измерения' }}
           />
         ) : null,
       permissions.companies

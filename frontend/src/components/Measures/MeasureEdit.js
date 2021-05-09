@@ -1,17 +1,13 @@
 import React from 'react';
 import {
-  Edit,
-  SimpleForm,
   TextInput,
 } from 'react-admin';
-import { EntityTitle } from '../utils';
+import { OneScreenEdit } from '../utils';
 
-const MeasureEdit = (props) => (
-  <Edit title={<EntityTitle filedName="name" />} undoable={false} {...props}>
-    <SimpleForm>
-      <TextInput source="name" label="Название единицы измерения" />
-    </SimpleForm>
-  </Edit>
-);
+const MeasureEdit = ({ onCancel, record, ...props }) => (record && record.id ? (
+  <OneScreenEdit record={record} onCancel={onCancel} {...props}>
+    <TextInput source="name" label="Название единицы измерения" />
+  </OneScreenEdit>
+) : null);
 
 export default MeasureEdit;
